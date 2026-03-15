@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rolex Submariner — Live Watch</title>
+  <style>
+    /* ─── Reset & Page ────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse at 50% 30%, #1a1a2e 0%, #0d0d0d 70%);
+      font-family: 'Georgia', serif;
+      overflow: hidden;
+    }
+
+    /* ─── Outer Case / Bezel ──────────────────────────────────────── */
+    .watch-wrap {
+      position: relative;
+      width: 360px;
+      height: 360px;
+      filter: drop-shadow(0 30px 60px rgba(0,0,0,.85))
+              drop-shadow(0 8px 16px rgba(0,0,0,.6));
+    }
+
+    /* Bezel ring */
+    .bezel {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 28%, #e8d9a0 0%, #c8a84b 18%, #8b6914 40%, #c8a84b 55%, #a07828 75%, #7a5c10 100%);
+      box-shadow:
+        inset 0 2px 4px rgba(255,255,200,.35),
+        inset 0 -2px 4px rgba(0,0,0,.6),
+        0 0 0 3px #5a4008,
+        0 0 0 6px #c8a84b;
+    }
+
+    /* Bezel minute markers (60 pips) rendered via canvas */
+    .bezel-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+    }
+
+    /* Watch face */
+    .face {
+      position: absolute;
+      inset: 20px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 50% 50%, #0a1a0a 0%, #051005 55%, #020802 100%);
+      box-shadow:
+        inset 0 4px 12px rgba(0,0,0,.9),
+        inset 0 -2px 6px rgba(0,0,0,.7),
+        0 0 0 2px #1a2a1a;
+      overflow: hidden;
+    }
+
+    /* Crystal reflection overlay */
+    .face::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background:
+        radial-gradient(ellipse 60% 45% at 35% 20%,
+          rgba(255,255,255,.07) 0%,
+          transparent 70%),
+        radial-gradient(ellipse 30% 20% at 70% 75%,
+          rgba(255,255,255,.03) 0%,
+          transparent 80%);
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    /* ─── Canvas (dial art) ──────────────────────────────────────── */
+    #dial {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ─── Crown ──────────────────────────────────────────────────── */
+    .crown {
+      position: absolute;
+      right: -14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 28px;
+      background: linear-gradient(90deg, #8b6914, #c8a84b, #e8d9a0, #c8a84b, #8b6914);
+      border-radius: 3px 5px 5px 3px;
+      box-shadow: 2px 0 6px rgba(0,0,0,.5);
+      z-index: 30;
+    }
+    .crown::after {
+      content: '';
+      position: absolute;
+      inset: 4px 2px;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent, transparent 2px,
+        rgba(0,0,0,.25) 2px, rgba(0,0,0,.25) 4px
+      );
+      border-radius: 2px 3px 3px 2px;
+    }
+
+    /* ─── Lugs ───────────────────────────────────────────────────── */
+    .lug { position: absolute; left: 50%; transform: translateX(-50%); }
+    .lug-top    { top: -22px;    width: 70px; height: 28px; }
+    .lug-bottom { bottom: -22px; width: 70px; height: 28px; }
+    .lug::before, .lug::after {
+      content: '';
+      position: absolute;
+      width: 26px;
+      height: 100%;
+      background: linear-gradient(180deg, #e8d9a0, #a07828, #7a5c10);
+      border-radius: 4px 4px 0 0;
+      box-shadow: inset 0 1px 3px rgba(255,255,200,.2), 1px 0 4px rgba(0,0,0,.6);
+    }
+    .lug-top::before, .lug-top::after { top: 0; }
+    .lug-bottom::before, .lug-bottom::after { bottom: 0; border-radius: 0 0 4px 4px; }
+    .lug::before { left: 0; }
+    .lug::after  { right: 0; }
+
+    /* ─── Strap ──────────────────────────────────────────────────── */
+    .strap {
+      width: 80px;
+      height: 110px;
+      background: linear-gradient(180deg, #1c1c1c, #2a2a2a, #1c1c1c);
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.8);
+      position: relative;
+      overflow: hidden;
+    }
+    .strap::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent, transparent 3px,
+        rgba(255,255,255,.03) 3px, rgba(255,255,255,.03) 4px
+      );
+    }
+    .strap-top    { border-radius: 4px 4px 0 0; margin-bottom: 2px; }
+    .strap-bottom { border-radius: 0 0 4px 4px; margin-top: 2px; }
+
+    /* ─── Layout stack: strap-top / watch / strap-bottom ─────────── */
+    .watch-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ─── Date window ────────────────────────────────────────────── */
+    #date-display {
+      position: absolute;
+      right: 22%;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 26px;
+      height: 18px;
+      background: #fff;
+      border: 1.5px solid #888;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: bold;
+      font-family: 'Arial', sans-serif;
+      color: #000;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.5);
+      z-index: 12;
+      letter-spacing: 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="watch-column">
+  <div class="strap strap-top"></div>
+
+  <div class="watch-wrap">
+    <!-- Lugs -->
+    <div class="lug lug-top"></div>
+    <div class="lug lug-bottom"></div>
+
+    <!-- Crown -->
+    <div class="crown"></div>
+
+    <!-- Bezel -->
+    <div class="bezel">
+      <canvas class="bezel-canvas" id="bezel-canvas"></canvas>
+    </div>
+
+    <!-- Dial face -->
+    <div class="face">
+      <canvas id="dial"></canvas>
+      <div id="date-display">--</div>
+    </div>
+  </div>
+
+  <div class="strap strap-bottom"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ─── Colour constants ───────────────────────────────────────── */
+  const GOLD  = '#c8a84b';
+  const GOLD2 = '#e8d9a0';
+  const WHITE = '#e8e8e0';
+  const GREEN = '#006633';
+  const LUME  = '#b8e0a0';
+
+  /* ─── Bezel ──────────────────────────────────────────────────── */
+  function drawBezel() {
+    const c  = document.getElementById('bezel-canvas');
+    const sz = c.parentElement.offsetWidth;
+    c.width  = sz;
+    c.height = sz;
+    const ctx = c.getContext('2d');
+    const cx  = sz / 2, cy = sz / 2, R = sz / 2;
+    const inner = R * 0.90; // inner edge of bezel face
+
+    for (let i = 0; i < 60; i++) {
+      const angle = (i / 60) * Math.PI * 2 - Math.PI / 2;
+      const isMajor = i % 5 === 0;
+      const len  = isMajor ? R * 0.10 : R * 0.055;
+      const wide = isMajor ? 2.2 : 1.1;
+      const r0   = inner - 4;
+      const r1   = r0 - len;
+
+      ctx.save();
+      ctx.strokeStyle = isMajor ? GOLD2 : 'rgba(255,220,120,.55)';
+      ctx.lineWidth   = wide;
+      ctx.lineCap     = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cx + r0 * Math.cos(angle), cy + r0 * Math.sin(angle));
+      ctx.lineTo(cx + r1 * Math.cos(angle), cy + r1 * Math.sin(angle));
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    /* Triangle pip at 12 */
+    const a12 = -Math.PI / 2;
+    ctx.save();
+    ctx.fillStyle = GOLD2;
+    const tipR = inner - 6, baseR = inner - 18;
+    const tipX = cx + tipR * Math.cos(a12),
+          tipY = cy + tipR * Math.sin(a12);
+    const bl = 5;
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(
+      cx + baseR * Math.cos(a12) + bl * Math.cos(a12 + Math.PI / 2),
+      cy + baseR * Math.sin(a12) + bl * Math.sin(a12 + Math.PI / 2)
+    );
+    ctx.lineTo(
+      cx + baseR * Math.cos(a12) + bl * Math.cos(a12 - Math.PI / 2),
+      cy + baseR * Math.sin(a12) + bl * Math.sin(a12 - Math.PI / 2)
+    );
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /* ─── Main dial canvas ───────────────────────────────────────── */
+  const dial = document.getElementById('dial');
+  let sz, cx, cy, R;
+
+  function resize() {
+    sz = dial.parentElement.offsetWidth;
+    dial.width  = sz;
+    dial.height = sz;
+    cx = cy = sz / 2;
+    R  = sz / 2;
+    drawBezel();
+    render();
+  }
+
+  function drawStaticDial(ctx) {
+    /* Sunburst gradient background */
+    const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+    bg.addColorStop(0,   '#0d2010');
+    bg.addColorStop(0.5, '#051008');
+    bg.addColorStop(1,   '#020804');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, sz, sz);
+
+    /* Fine radial texture lines */
+    for (let i = 0; i < 72; i++) {
+      const a = (i / 72) * Math.PI * 2;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(20,50,20,.18)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + R * Math.cos(a), cy + R * Math.sin(a));
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    /* ── Hour markers ───────────────────────────────────────────── */
+    const markerR = R * 0.76;
+    for (let h = 1; h <= 12; h++) {
+      if (h === 6) continue; // reserved for date window
+      const angle = (h / 12) * Math.PI * 2 - Math.PI / 2;
+      const mx = cx + markerR * Math.cos(angle);
+      const my = cy + markerR * Math.sin(angle);
+
+      if (h === 3 || h === 9) {
+        /* Rectangle markers at 3 & 9 */
+        ctx.save();
+        ctx.translate(mx, my);
+        ctx.rotate(angle + Math.PI / 2);
+        const rw = R * 0.055, rh = R * 0.14;
+        ctx.fillStyle = WHITE;
+        ctx.shadowColor = 'rgba(200,220,200,.4)';
+        ctx.shadowBlur  = 6;
+        ctx.fillRect(-rw / 2, -rh / 2, rw, rh);
+        /* Lume fill */
+        ctx.fillStyle = LUME;
+        ctx.globalAlpha = 0.18;
+        ctx.fillRect(-rw / 2, -rh / 2, rw, rh);
+        ctx.restore();
+      } else if (h === 12) {
+        /* Triple-bar marker at 12 */
+        const barAngle = -Math.PI / 2;
+        const barCx = cx + markerR * Math.cos(barAngle);
+        const barCy = cy + markerR * Math.sin(barAngle);
+        ctx.save();
+        ctx.translate(barCx, barCy);
+        ctx.rotate(barAngle + Math.PI / 2);
+        const bw = R * 0.055, bh = R * 0.14;
+        ctx.fillStyle = WHITE;
+        ctx.shadowColor = 'rgba(200,220,200,.4)';
+        ctx.shadowBlur  = 6;
+        for (let b = -1; b <= 1; b++) {
+          ctx.fillRect(b * bw * 1.5 - bw / 2, -bh / 2, bw, bh);
+        }
+        ctx.restore();
+      } else {
+        /* Circle markers for remaining hours */
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(mx, my, R * 0.038, 0, Math.PI * 2);
+        ctx.fillStyle = WHITE;
+        ctx.shadowColor = 'rgba(200,220,200,.4)';
+        ctx.shadowBlur  = 6;
+        ctx.fill();
+        ctx.fillStyle = LUME;
+        ctx.globalAlpha = 0.20;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    /* ── Minute track (60 pips) ─────────────────────────────────── */
+    const minR = R * 0.88;
+    for (let m = 0; m < 60; m++) {
+      const angle = (m / 60) * Math.PI * 2 - Math.PI / 2;
+      const isMajor = m % 5 === 0;
+      if (isMajor) continue; // hour markers cover these
+      const len  = R * 0.04;
+      const wide = 1.2;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(200,200,180,.55)';
+      ctx.lineWidth   = wide;
+      ctx.lineCap     = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cx + minR * Math.cos(angle), cy + minR * Math.sin(angle));
+      ctx.lineTo(cx + (minR - len) * Math.cos(angle), cy + (minR - len) * Math.sin(angle));
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    /* ── ROLEX crown logo (SVG path approximation) ──────────────── */
+    const logoY = cy - R * 0.26;
+    ctx.save();
+    ctx.translate(cx, logoY);
+    ctx.scale(R * 0.0015, R * 0.0015);
+    ctx.fillStyle = GOLD;
+    /* Simple crown silhouette using arcs */
+    ctx.beginPath();
+    ctx.arc(-30, 10, 18, Math.PI, 0);
+    ctx.arc(0,   10, 18, Math.PI, 0);
+    ctx.arc(30,  10, 18, Math.PI, 0);
+    ctx.quadraticCurveTo(52, 30, 48, 48);
+    ctx.lineTo(-48, 48);
+    ctx.quadraticCurveTo(-52, 30, -48, 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    /* ── Brand text ─────────────────────────────────────────────── */
+    ctx.save();
+    ctx.fillStyle = WHITE;
+    ctx.textAlign = 'center';
+    ctx.font = `bold ${R * 0.085}px 'Georgia', serif`;
+    ctx.letterSpacing = '0.18em';
+    ctx.shadowColor = 'rgba(0,0,0,.8)';
+    ctx.shadowBlur  = 4;
+    ctx.fillText('ROLEX', cx, cy - R * 0.14);
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(200,180,100,.85)';
+    ctx.textAlign = 'center';
+    ctx.font = `${R * 0.048}px 'Arial', sans-serif`;
+    ctx.letterSpacing = '0.05em';
+    ctx.fillText('SUBMARINER', cx, cy - R * 0.02);
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(180,180,160,.5)';
+    ctx.textAlign = 'center';
+    ctx.font      = `${R * 0.034}px 'Arial', sans-serif`;
+    ctx.fillText('SUPERLATIVE CHRONOMETER', cx, cy + R * 0.07);
+    ctx.fillText('OFFICIALLY CERTIFIED', cx, cy + R * 0.115);
+    ctx.restore();
+  }
+
+  /* ─── Hands ──────────────────────────────────────────────────── */
+  function drawHand(ctx, angle, length, width, color, lumeLen) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    ctx.lineCap  = 'round';
+    ctx.lineJoin = 'round';
+
+    /* Shadow */
+    ctx.shadowColor = 'rgba(0,0,0,.7)';
+    ctx.shadowBlur  = 8;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+
+    /* Main hand body */
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = width;
+    ctx.beginPath();
+    ctx.moveTo(0, length * 0.15);
+    ctx.lineTo(0, -length);
+    ctx.stroke();
+
+    /* Lume rectangle inset */
+    if (lumeLen) {
+      ctx.shadowBlur = 0;
+      ctx.fillStyle  = LUME;
+      ctx.globalAlpha = 0.55;
+      const lw = width * 0.4;
+      ctx.fillRect(-lw / 2, -length + 2, lw, lumeLen);
+    }
+
+    ctx.restore();
+  }
+
+  function drawMercedes(ctx) {
+    /* Rolex-style hour hand "Mercedes" tip */
+  }
+
+  function drawHourHand(ctx, angle) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    ctx.shadowColor = 'rgba(0,0,0,.8)';
+    ctx.shadowBlur  = 10;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+
+    const len  = R * 0.50;
+    const wTop = R * 0.065;
+
+    /* Hand shape: tapered rectangle */
+    ctx.beginPath();
+    ctx.moveTo(-wTop / 2, -len);
+    ctx.lineTo( wTop / 2, -len);
+    ctx.lineTo( wTop * 0.7, -len * 0.25);
+    ctx.lineTo( wTop * 0.55, len * 0.15);
+    ctx.lineTo(-wTop * 0.55, len * 0.15);
+    ctx.lineTo(-wTop * 0.7, -len * 0.25);
+    ctx.closePath();
+    ctx.fillStyle = WHITE;
+    ctx.fill();
+
+    /* Lume */
+    ctx.fillStyle  = LUME;
+    ctx.globalAlpha = 0.45;
+    ctx.beginPath();
+    ctx.moveTo(-wTop * 0.35, -len + 4);
+    ctx.lineTo( wTop * 0.35, -len + 4);
+    ctx.lineTo( wTop * 0.25, -len * 0.30);
+    ctx.lineTo(-wTop * 0.25, -len * 0.30);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawMinuteHand(ctx, angle) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    ctx.shadowColor = 'rgba(0,0,0,.8)';
+    ctx.shadowBlur  = 10;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+
+    const len  = R * 0.68;
+    const wTop = R * 0.050;
+
+    ctx.beginPath();
+    ctx.moveTo(-wTop / 2, -len);
+    ctx.lineTo( wTop / 2, -len);
+    ctx.lineTo( wTop * 0.65, -len * 0.20);
+    ctx.lineTo( wTop * 0.5,  len * 0.15);
+    ctx.lineTo(-wTop * 0.5,  len * 0.15);
+    ctx.lineTo(-wTop * 0.65, -len * 0.20);
+    ctx.closePath();
+    ctx.fillStyle = WHITE;
+    ctx.fill();
+
+    /* Lume */
+    ctx.fillStyle  = LUME;
+    ctx.globalAlpha = 0.45;
+    ctx.beginPath();
+    ctx.moveTo(-wTop * 0.28, -len + 4);
+    ctx.lineTo( wTop * 0.28, -len + 4);
+    ctx.lineTo( wTop * 0.20, -len * 0.25);
+    ctx.lineTo(-wTop * 0.20, -len * 0.25);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawSecondHand(ctx, angle) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    ctx.shadowColor = 'rgba(0,0,0,.7)';
+    ctx.shadowBlur  = 6;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 1;
+
+    /* Long thin needle */
+    ctx.strokeStyle = '#d42b2b';
+    ctx.lineWidth   = R * 0.014;
+    ctx.lineCap     = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0,  R * 0.18);
+    ctx.lineTo(0, -R * 0.74);
+    ctx.stroke();
+
+    /* Counter-weight paddle */
+    ctx.strokeStyle = '#d42b2b';
+    ctx.lineWidth   = R * 0.028;
+    ctx.beginPath();
+    ctx.moveTo(0, R * 0.18);
+    ctx.lineTo(0, R * 0.32);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawCenter(ctx) {
+    ctx.save();
+    /* Outer ring */
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * 0.045, 0, Math.PI * 2);
+    ctx.fillStyle = '#888';
+    ctx.shadowColor = 'rgba(0,0,0,.6)';
+    ctx.shadowBlur  = 4;
+    ctx.fill();
+
+    /* Inner cap */
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * 0.026, 0, Math.PI * 2);
+    ctx.fillStyle = '#d42b2b';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * 0.012, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /* ─── Date ───────────────────────────────────────────────────── */
+  function updateDate() {
+    const d = new Date();
+    document.getElementById('date-display').textContent = d.getDate();
+  }
+
+  /* ─── Main render loop ───────────────────────────────────────── */
+  let lastSecFrac = -1;
+
+  function render() {
+    const ctx = dial.getContext('2d');
+    ctx.clearRect(0, 0, sz, sz);
+    drawStaticDial(ctx);
+
+    const now    = new Date();
+    const ms     = now.getMilliseconds();
+    const sec    = now.getSeconds() + ms / 1000;
+    const min    = now.getMinutes() + sec / 60;
+    const hour   = (now.getHours() % 12) + min / 60;
+
+    const secAngle  = (sec  / 60)  * Math.PI * 2 - Math.PI / 2;
+    const minAngle  = (min  / 60)  * Math.PI * 2 - Math.PI / 2;
+    const hourAngle = (hour / 12)  * Math.PI * 2 - Math.PI / 2;
+
+    drawHourHand(ctx, hourAngle);
+    drawMinuteHand(ctx, minAngle);
+    drawSecondHand(ctx, secAngle);
+    drawCenter(ctx);
+
+    /* Update date at second boundary */
+    const secFloor = Math.floor(sec);
+    if (secFloor !== lastSecFrac) {
+      lastSecFrac = secFloor;
+      updateDate();
+    }
+
+    requestAnimationFrame(render);
+  }
+
+  /* ─── Init ───────────────────────────────────────────────────── */
+  window.addEventListener('resize', resize);
+  resize();
+  updateDate();
+})();
+</script>
+</body>
+</html>
